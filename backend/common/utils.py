@@ -1,3 +1,12 @@
+def echo_filter_params(request) -> dict:
+    """The active query params minus pagination, for recording on an audit row."""
+    return {
+        key: value
+        for key, value in request.query_params.items()
+        if key not in {"page", "page_size"}
+    }
+
+
 def get_client_ip(request) -> str | None:
     """Best-effort client IP.
 
