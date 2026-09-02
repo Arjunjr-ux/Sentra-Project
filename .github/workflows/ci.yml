@@ -1,0 +1,27 @@
+# CI — placeholder scaffold. Filled in fully during Phase 4 (see CLAUDE_CODE_PROMPTS.md).
+#
+# Planned jobs:
+#   backend  — ruff check, black --check, pytest with >=80% coverage gate, pip-audit
+#   frontend — eslint, prettier --check, vitest, npm audit
+#
+# Kept minimal for now so `main` stays green while the app is still being scaffolded.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  placeholder:
+    name: scaffold check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm monorepo layout
+        run: |
+          test -f backend/requirements.txt
+          test -f frontend/package.json
+          echo "Scaffold present. Real lint/test/coverage jobs land in Phase 4."

@@ -1,0 +1,12 @@
+# Sentra backend — development & CI tooling (exact pins).
+# Install with:  pip install -r requirements-dev.txt  (pulls in requirements.txt)
+
+-r requirements.txt
+
+pytest==9.1.1
+pytest-django==4.14.0
+pytest-cov==7.1.0
+factory-boy==3.3.3
+ruff==0.16.5
+black==26.5.1
+pip-audit==2.10.1
