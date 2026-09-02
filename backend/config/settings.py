@@ -8,11 +8,12 @@ for static files. Application models, auth, and RBAC land in later phases.
 Docs: https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
+from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
 from dotenv import load_dotenv
-import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -51,10 +52,19 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third-party
     "rest_framework",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "django_filters",
     "drf_spectacular",
     "corsheaders",
+    # Local
+    "accounts",
+    "rbac",
+    "audit",
+    "common",
 ]
+
+AUTH_USER_MODEL = "accounts.User"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -101,7 +111,16 @@ DATABASES = {
 }
 
 
-# --- Password validation ----------------------------------------------------
+# --- Password hashing & validation ----------------------------------------
+
+# Argon2 first (see SENTRA_BUILD_SPEC.md §6). The remaining hashers stay listed
+# so pre-existing hashes still verify and get upgraded on next login.
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.ScryptPasswordHasher",
+]
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -145,7 +164,44 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ],
+    # JWT only: the access token is a Bearer header, the refresh token rides an
+    # httpOnly cookie. No SessionAuthentication → no accidental CSRF coupling on
+    # the /auth/ endpoints.
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+    # Nothing is public unless it explicitly opts out (SENTRA_BUILD_SPEC.md §5).
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    # register/ and login/ attach common.throttling.AuthRateThrottle explicitly;
+    # this is the dedicated "auth" scope from §6, not the general anon rate.
+    "DEFAULT_THROTTLE_RATES": {
+        "auth": "5/min",
+    },
+    "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
 }
+
+# --- SimpleJWT -------------------------------------------------------------
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+}
+
+# Refresh-token cookie. Path-scoped to the auth endpoints so it is never sent to
+# the rest of the API. SameSite=None requires Secure, which we only enable
+# outside DEBUG so local http dev keeps working (SENTRA_BUILD_SPEC.md §5).
+AUTH_REFRESH_COOKIE = "refresh_token"
+AUTH_REFRESH_COOKIE_PATH = "/api/v1/auth/"
+AUTH_REFRESH_COOKIE_SECURE = not DEBUG
+AUTH_REFRESH_COOKIE_SAMESITE = "Lax" if DEBUG else "None"
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Sentra API",
