@@ -179,8 +179,13 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "auth": "5/min",
     },
-    "EXCEPTION_HANDLER": "rest_framework.views.exception_handler",
+    "DEFAULT_PAGINATION_CLASS": "common.pagination.DefaultPagination",
+    # Guarantees a stable `detail` key on every error response (§4).
+    "EXCEPTION_HANDLER": "common.exceptions.sentra_exception_handler",
 }
+
+# Hard cap on rows written by any /export/ endpoint (§4). Overridable in tests.
+EXPORT_MAX_ROWS = 10_000
 
 # --- SimpleJWT -------------------------------------------------------------
 
@@ -212,7 +217,29 @@ SPECTACULAR_SETTINGS = {
 }
 
 
-# --- CORS -------------------------------------------------------------------
+# --- CORS / CSRF ----------------------------------------------------------
 
+# Strict allow-list: the frontend origin only, with credentials so the httpOnly
+# refresh cookie is accepted (SENTRA_BUILD_SPEC.md §6).
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
 CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", ",".join(CORS_ALLOWED_ORIGINS))
+
+
+# --- Security headers -----------------------------------------------------
+# Always-on hardening; the TLS-dependent switches turn on when DEBUG is False.
+# Verify with: DEBUG=False python manage.py check --deploy
+
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
+# Render (and most PaaS) terminate TLS at the edge and forward this header.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31_536_000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
