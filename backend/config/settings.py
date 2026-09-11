@@ -29,6 +29,16 @@ def env_list(name: str, default: str = "") -> list[str]:
     return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
 
 
+def as_origin(value: str) -> str:
+    """Normalise an origin: drop a trailing slash, and assume https:// when the
+    scheme is missing. Render's blueprint can only pass a bare hostname via
+    `fromService`, but CORS/CSRF need a full scheme-qualified origin."""
+    value = value.strip().rstrip("/")
+    if value and "://" not in value:
+        value = f"https://{value}"
+    return value
+
+
 # --- Core -------------------------------------------------------------------
 
 SECRET_KEY = os.getenv(
@@ -214,6 +224,10 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "SCHEMA_PATH_PREFIX": "/api/v1",
+    # The OpenAPI schema and Swagger UI are public (no data, standard practice) —
+    # keep them reachable despite the IsAuthenticated default. The deploy health
+    # check hits /api/v1/schema/.
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
 }
 
 
@@ -221,9 +235,13 @@ SPECTACULAR_SETTINGS = {
 
 # Strict allow-list: the frontend origin only, with credentials so the httpOnly
 # refresh cookie is accepted (SENTRA_BUILD_SPEC.md §6).
-CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
+CORS_ALLOWED_ORIGINS = [
+    as_origin(o) for o in env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
+]
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", ",".join(CORS_ALLOWED_ORIGINS))
+CSRF_TRUSTED_ORIGINS = [
+    as_origin(o) for o in env_list("CSRF_TRUSTED_ORIGINS", ",".join(CORS_ALLOWED_ORIGINS))
+]
 
 
 # --- Security headers -----------------------------------------------------

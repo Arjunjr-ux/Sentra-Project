@@ -1,6 +1,17 @@
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+/* Render's blueprint can only pass a bare API hostname via `fromService`, so
+   accept `host`, `host/api/v1`, or a full URL and normalise to the base the
+   app expects. The documented local value already ends with /api/v1. */
+function normalizeApiBase(raw) {
+  let url = (raw || 'http://localhost:8000/api/v1').trim()
+  if (!/^https?:\/\//i.test(url)) url = `https://${url}`
+  url = url.replace(/\/+$/, '')
+  if (!/\/api\/v1$/.test(url)) url += '/api/v1'
+  return url
+}
+
+const BASE_URL = normalizeApiBase(import.meta.env.VITE_API_URL)
 
 /* Access token lives in memory only — never localStorage/sessionStorage
    (SENTRA_BUILD_SPEC.md §5). */
