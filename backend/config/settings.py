@@ -50,6 +50,20 @@ DEBUG = env_bool("DEBUG", True)
 
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
 
+# Render sets RENDER_EXTERNAL_HOSTNAME automatically for every deploy; make
+# sure it's always trusted even if ALLOWED_HOSTS wasn't set (or was set to
+# something stale) in the dashboard, since a mismatch here 400s every
+# request — including the platform health check — before any app code runs.
+_render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+if _render_host and _render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_render_host)
+
+# Safety net: Render's internal health checker/load balancer can reach the
+# service via a host that doesn't exactly match the public hostname above.
+# A leading-dot entry matches any *.onrender.com subdomain.
+if not DEBUG and ".onrender.com" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(".onrender.com")
+
 
 # --- Applications ----------------------------------------------------------
 
