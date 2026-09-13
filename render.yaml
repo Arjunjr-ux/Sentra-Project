@@ -39,10 +39,16 @@ services:
           name: sentra-api
           property: host
       - key: CORS_ALLOWED_ORIGINS
-        fromService:
-          type: web
-          name: sentra-web
-          property: host
+        # `fromService … property: host` resolves to the bare service label
+        # (e.g. "sentra-web"), not the full public hostname — confirmed live:
+        # the deployed API rejected every request from the real frontend
+        # origin with no Access-Control-Allow-Origin header at all. sentra-web
+        # has no naming collision on Render (unlike sentra-api), so its
+        # hostname is fixed and known; pin it as a literal instead of a
+        # cross-service reference that silently resolves to the wrong value.
+        # CSRF_TRUSTED_ORIGINS inherits this in settings.py when unset, so it
+        # doesn't need its own entry here.
+        value: https://sentra-web.onrender.com
 
   - type: web
     name: sentra-web
