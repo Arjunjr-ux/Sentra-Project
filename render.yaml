@@ -62,7 +62,15 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: sentra-api
-          property: host
+        # Same fromService/property:host bug as CORS_ALLOWED_ORIGINS below:
+        # it resolves to the bare service label ("sentra-api-txs2"), not a
+        # usable URL — confirmed by pulling the built bundle and finding that
+        # exact bare string baked in with zero "onrender.com" occurrences, so
+        # every request from the deployed frontend was going nowhere. Vite
+        # inlines this at build time, so a wrong value here ships until the
+        # next full rebuild regardless of what's set afterwards. Pin the
+        # complete, final URL — sentra-api's hostname isn't guessable (Render
+        # appended "-txs2" because "sentra-api" was already taken by another
+        # account), so this must be updated by hand if that service is ever
+        # recreated under a different generated name.
+        value: https://sentra-api-txs2.onrender.com/api/v1
