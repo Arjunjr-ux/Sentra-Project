@@ -222,6 +222,19 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "auth": "5/min",
     },
+    # DRF's throttle identity (BaseThrottle.get_ident) is the *entire* raw
+    # X-Forwarded-For value when NUM_PROXIES is unset, not just the first hop
+    # — so behind N proxies it silently varies per request and the throttle
+    # never accumulates. Measured directly against production (temporary
+    # diagnostic on LoginView, since removed): every request showed exactly
+    # 3 comma-separated hops, "<real client ip>, <cloudflare edge ip>,
+    # <render internal LB ip>" — the client IP is always first and stable;
+    # only the two proxy-added hops after it vary between requests (Cloudflare
+    # anycast + Render's internal routing pick different nodes each time).
+    # NUM_PROXIES=3 makes get_ident() take addrs[-3], i.e. the first entry —
+    # the real, stable client IP — regardless of which nodes handled a given
+    # request.
+    "NUM_PROXIES": 3,
     "DEFAULT_PAGINATION_CLASS": "common.pagination.DefaultPagination",
     # Guarantees a stable `detail` key on every error response (§4).
     "EXCEPTION_HANDLER": "common.exceptions.sentra_exception_handler",
