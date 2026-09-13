@@ -17,11 +17,12 @@ interactive prototype the build was based on.
 
 | | URL |
 |---|---|
-| Frontend | `https://<sentra-web>.onrender.com` |
-| API | `https://<sentra-api>.onrender.com/api/v1` |
-| Swagger UI | `https://<sentra-api>.onrender.com/api/v1/schema/swagger-ui/` |
+| Frontend | <https://sentra-web.onrender.com> |
+| API | <https://sentra-api-txs2.onrender.com/api/v1> |
+| Swagger UI | <https://sentra-api-txs2.onrender.com/api/v1/schema/swagger-ui/> |
 
-> Replace the placeholders with the real service URLs after connecting the repo to Render.
+> `sentra-api` was already taken on Render, so the API service was assigned the
+> `sentra-api-txs2` hostname instead of the plain one.
 
 **Render free-tier caveats:** the API web service sleeps after ~15 minutes idle, so the
 first request after a cold start takes ~30 seconds to wake it up. Free PostgreSQL instances
