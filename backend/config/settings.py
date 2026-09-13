@@ -135,6 +135,25 @@ DATABASES = {
 }
 
 
+# --- Cache -----------------------------------------------------------------
+# Local dev / tests run a single process, so Django's default in-process
+# LocMemCache is fine there. In production gunicorn runs multiple worker
+# processes (see render.yaml); each has its own independent LocMemCache, so
+# DRF's per-IP throttle counters (the 5/min "auth" scope on register/login,
+# §6) split across workers and silently stop being enforced — confirmed
+# live: 20 rapid login attempts, zero 429s. Postgres is already provisioned,
+# so share counters via its DatabaseCache rather than standing up Redis. The
+# table is created by `createcachetable` in the Render build command (safe
+# to run on every deploy — it's a no-op once the table exists).
+if not DEBUG:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+            "LOCATION": "django_cache",
+        }
+    }
+
+
 # --- Password hashing & validation ----------------------------------------
 
 # Argon2 first (see SENTRA_BUILD_SPEC.md §6). The remaining hashers stay listed
