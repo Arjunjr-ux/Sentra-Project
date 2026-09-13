@@ -39,6 +39,11 @@ services:
           type: web
           name: sentra-api
           property: host
+      - key: DEBUG_XFF_PROBE
+        # TEMPORARY — enables the read-only X-Forwarded-For diagnostic on
+        # LoginView (accounts/views.py). Remove this key and that code once
+        # NUM_PROXIES has been calibrated from real header data.
+        value: "true"
       - key: CORS_ALLOWED_ORIGINS
         # `fromService … property: host` resolves to the bare service label
         # (e.g. "sentra-web"), not the full public hostname — confirmed live:

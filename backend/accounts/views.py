@@ -1,3 +1,5 @@
+import os
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
@@ -79,6 +81,19 @@ class LoginView(APIView):
             target=user,
             ip=get_client_ip(request),
         )
+        return response
+
+    # TEMPORARY — read-only diagnostic for the X-Forwarded-For chain shape
+    # behind Cloudflare/Render, to calibrate NUM_PROXIES correctly instead of
+    # guessing. Applies to every response this view produces (success, 401,
+    # 429) since DRF routes all of them through finalize_response. Gated
+    # behind an env var that is not set by default, so it's inert unless
+    # explicitly enabled for this investigation. Remove once calibrated.
+    def finalize_response(self, request, response, *args, **kwargs):
+        response = super().finalize_response(request, response, *args, **kwargs)
+        if os.environ.get("DEBUG_XFF_PROBE"):
+            response["X-Debug-Xff"] = request.headers.get("x-forwarded-for") or "(none)"
+            response["X-Debug-Remote-Addr"] = request.META.get("REMOTE_ADDR") or "(none)"
         return response
 
 
